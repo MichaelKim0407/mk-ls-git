@@ -1,12 +1,11 @@
 import os
 import pty
-import re
 import subprocess
 import sys
 import termios
 
 from mklibpy.common.string import AnyString
-from mklibpy.terminal.colored_text import get_text
+from mklibpy.terminal.colored_text import get_text, remove_switch
 from mklibpy.util.path import CD
 
 __author__ = 'Michael'
@@ -84,8 +83,6 @@ class LsGit(object):
 
 
 class LsGitProcess(object):
-    color_reg = re.compile('\033\[[0-9;]*m')  # TODO move to mklibpy
-
     def __init__(self, parent, args):
         self.__parent = parent
         self.__args = args
@@ -135,7 +132,7 @@ class LsGitProcess(object):
 
         dir = sp[8]
         if self.__color:
-            dir = self.color_reg.sub('', dir)
+            dir = remove_switch(dir)
 
         abspath = os.path.abspath(os.path.join(self.__cur_dir, dir))
         if not is_git_repo(abspath):
