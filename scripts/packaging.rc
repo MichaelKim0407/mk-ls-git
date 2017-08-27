@@ -1,2 +1,2 @@
 version=$(cat ../VERSION)
-dist="dist/mk-ls-git-$version.tar.gz"
+dist="dist/mklsgit-$version.tar.gz"
