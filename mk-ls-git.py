@@ -10,15 +10,6 @@ from mklibpy.util.path import CD
 __author__ = 'Michael'
 
 
-def is_tty(fd):
-    try:
-        termios.tcgetattr(fd)
-    except termios.error:
-        return False
-    else:
-        return True
-
-
 def system_call(*args, **kwargs):
     out = subprocess.check_output(*args, **kwargs)
     return out.decode().splitlines(False)
@@ -38,23 +29,29 @@ def get_git_branch(abspath):
             return sp[1]
 
 
-def is_gnu_ls():
-    try:
-        system_call(['ls', '--version'], stderr=subprocess.DEVNULL)
-    except subprocess.CalledProcessError:
-        return False
-    else:
-        return True
-
-
 class LsGit(object):
     def __init__(self, stdout=None):
         self.__stdout = stdout
         if stdout is None:
             self.__stdout = sys.stdout
 
-        self.is_tty = is_tty(self.__stdout)
-        self.is_gnu = is_gnu_ls()
+    @property
+    def is_tty(self):
+        try:
+            termios.tcgetattr(self.__stdout)
+        except termios.error:
+            return False
+        else:
+            return True
+
+    @property
+    def is_gnu(self):
+        try:
+            system_call(['ls', '--version'], stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            return False
+        else:
+            return True
 
     def print(self, *args, **kwargs):
         print(*args, **kwargs, file=self.__stdout)
@@ -69,7 +66,6 @@ class LsGitProcess(object):
         self.__args = args
 
         self.__options = None
-        self.__color = None
         self.__dirs = None
         self.__cur_dir = None
 
@@ -78,9 +74,9 @@ class LsGitProcess(object):
     def __parse_args(self):
         self.__options = [arg for arg in self.__args if arg.startswith('-')]
         self.__dirs = [arg for arg in self.__args if not arg.startswith('-')]
-        self.__color = self.__is_colored()
 
-    def __is_colored(self):
+    @property
+    def __color(self):
         if not self.__parent.is_tty:
             return False
         options = AnyString(self.__options)
