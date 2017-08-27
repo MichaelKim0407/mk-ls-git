@@ -170,15 +170,40 @@ class LsGitProcess(object):
 
         if not self.__color:
             lines = self.__system_call()
+            workaround_flag = False
         else:
             # This is a workaround for a bug on Mac. See Issue #1 on GitHub
             try:
                 lines = self.__system_call_pty()
+                workaround_flag = False
             except subprocess.TimeoutExpired:
                 lines = self.__system_call()
+                workaround_flag = True
 
-        for line in lines:
-            self.__parent.print(self.__process_line(line))
+        if not workaround_flag:
+            for line in lines:
+                self.__parent.print(self.__process_line(line))
+
+        else:
+            new_lines = []
+            modified_flag = False
+            for line in lines:
+                if modified_flag:
+                    self.__parent.print(self.__process_line(line))
+                    continue
+
+                new_line = self.__process_line(line)
+                if new_line == line:
+                    new_lines.append(line)
+                    continue
+
+                modified_flag = True
+                for line0 in new_lines:
+                    self.__parent.print(line0)
+                self.__parent.print(new_line)
+
+            if not modified_flag:
+                self.__native_call()
 
 
 def main(args=None):
