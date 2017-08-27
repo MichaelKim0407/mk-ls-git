@@ -91,6 +91,7 @@ class LsGitProcess(object):
     def __init__(self, parent, args):
         self.__parent = parent
         self.__args = args
+        self.__cmd = ['ls'] + list(self.__args)
 
         self.__options = None
         self.__dirs = None
@@ -99,19 +100,21 @@ class LsGitProcess(object):
         self.__parse_args()
 
     def __parse_args(self):
-        self.__options = [arg for arg in self.__args if arg.startswith('-')]
+        self.__options = AnyString([arg for arg in self.__args if arg.startswith('-')])
         self.__dirs = [arg for arg in self.__args if not arg.startswith('-')]
 
     @property
-    def __color(self):
-        options = AnyString(self.__options)
+    def _l(self):
+        return 'l' in self.__options
 
+    @property
+    def __color(self):
         if self.__parent.is_gnu:
-            if not options.startswith('--color'):
+            if not self.__options.startswith('--color'):
                 return False
-            if options == '--color' or options == '--color=always':
+            if self.__options == '--color' or self.__options == '--color=always':
                 return True
-            elif options == '--color=auto':
+            elif self.__options == '--color=auto':
                 return self.__parent.is_tty
             else:
                 return False
@@ -119,7 +122,7 @@ class LsGitProcess(object):
         else:
             if not self.__parent.is_tty:
                 return False
-            return 'G' in options
+            return 'G' in self.__options
 
     def color(self, text, color=None, mode=None):
         if not self.__color:
@@ -147,21 +150,23 @@ class LsGitProcess(object):
         return line + self.color(" ({})".format(branch), color='red', mode='bold')
 
     def run(self):
+        if not self._l:
+            subprocess.check_call(self.__cmd)
+            return
+
         if self.__dirs:
             self.__cur_dir = self.__dirs[0]
         else:
             self.__cur_dir = os.getcwd()
 
-        args = ['ls', '-l'] + list(self.__args)
-
         if not self.__color:
-            lines = system_call(args)
+            lines = system_call(self.__cmd)
         else:
             # This is a workaround for a bug on Mac. See Issue #1 on GitHub
             try:
-                lines = system_call_pty(args)
+                lines = system_call_pty(self.__cmd)
             except subprocess.TimeoutExpired:
-                lines = system_call(args)
+                lines = system_call(self.__cmd)
 
         for line in lines:
             self.__parent.print(self.__process_line(line))
