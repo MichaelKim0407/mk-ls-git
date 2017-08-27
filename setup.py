@@ -16,7 +16,7 @@ setup(
         'mklibpy>=0.6'
     ],
 
-    packages=find_packages(),
+    py_modules=['mklsgit'],
 
     entry_points={
         'console_scripts': [
