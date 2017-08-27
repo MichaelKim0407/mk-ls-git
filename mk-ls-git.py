@@ -149,9 +149,18 @@ class LsGitProcess(object):
         branch = get_git_branch(abspath)
         return line + self.color(" ({})".format(branch), color='red', mode='bold')
 
+    def __native_call(self):
+        return subprocess.check_call(self.__cmd)
+
+    def __system_call(self):
+        return system_call(self.__cmd)
+
+    def __system_call_pty(self):
+        return system_call_pty(self.__cmd)
+
     def run(self):
         if not self._l:
-            subprocess.check_call(self.__cmd)
+            self.__native_call()
             return
 
         if self.__dirs:
@@ -160,13 +169,13 @@ class LsGitProcess(object):
             self.__cur_dir = os.getcwd()
 
         if not self.__color:
-            lines = system_call(self.__cmd)
+            lines = self.__system_call()
         else:
             # This is a workaround for a bug on Mac. See Issue #1 on GitHub
             try:
-                lines = system_call_pty(self.__cmd)
+                lines = self.__system_call_pty()
             except subprocess.TimeoutExpired:
-                lines = system_call(self.__cmd)
+                lines = self.__system_call()
 
         for line in lines:
             self.__parent.print(self.__process_line(line))
