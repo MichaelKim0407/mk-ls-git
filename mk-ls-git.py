@@ -106,7 +106,7 @@ class LsGitProcess(object):
             return False
         options = AnyString(self.__options)
         if self.__parent.is_gnu:
-            return 'C' in options or options.startswith('--color')
+            return options.startswith('--color')
         else:
             return 'G' in options
 
