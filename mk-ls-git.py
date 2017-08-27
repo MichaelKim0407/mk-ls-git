@@ -33,6 +33,23 @@ class LsGit(object):
     def print(self, *args, **kwargs):
         print(*args, **kwargs, file=self.__stdout)
 
+    def process_line(self, line, env):
+        if line.endswith(':') and line[:-1] in env['dirs']:
+            env['cur_dir'] = line[:-1]
+            return line
+
+        sp = line.split()
+        if len(sp) < 9:
+            return line
+
+        dir = sp[8]
+        abspath = os.path.abspath(os.path.join(env['cur_dir'], dir))
+        if not self.is_git_repo(abspath):
+            return line
+
+        branch = self.get_git_branch(abspath)
+        return line + get_text(" ({})".format(branch), color='red')
+
     def __call__(self, *args):
         dirs = [arg for arg in args if not arg.startswith('-')]
 
@@ -41,25 +58,13 @@ class LsGit(object):
         else:
             cur_dir = os.getcwd()
 
+        env = {
+            'dirs': dirs,
+            'cur_dir': cur_dir,
+        }
+
         for line in self.system_call(['ls', '-l'] + list(args)):
-            if line.endswith(':') and line[:-1] in dirs:
-                cur_dir = line[:-1]
-                self.print(line)
-                continue
-
-            sp = line.split()
-            if len(sp) < 9:
-                self.print(line)
-                continue
-
-            dir = sp[8]
-            abspath = os.path.abspath(os.path.join(cur_dir, dir))
-            if not self.is_git_repo(abspath):
-                self.print(line)
-                continue
-
-            branch = self.get_git_branch(abspath)
-            self.print(line + get_text(" ({})".format(branch), color='red'))
+            print(self.process_line(line, env))
 
 
 def main(args=None):
