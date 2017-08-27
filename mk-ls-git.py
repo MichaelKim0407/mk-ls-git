@@ -102,12 +102,21 @@ class LsGitProcess(object):
 
     @property
     def __color(self):
-        if not self.__parent.is_tty:
-            return False
         options = AnyString(self.__options)
+
         if self.__parent.is_gnu:
-            return options.startswith('--color')
+            if not options.startswith('--color'):
+                return False
+            if options == '--color' or options == '--color=always':
+                return True
+            elif options == '--color=auto':
+                return self.__parent.is_tty
+            else:
+                return False
+
         else:
+            if not self.__parent.is_tty:
+                return False
             return 'G' in options
 
     def color(self, text, color=None, mode=None):
