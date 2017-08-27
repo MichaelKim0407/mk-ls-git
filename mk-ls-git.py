@@ -58,14 +58,14 @@ def get_git_branch(abspath):
 
 class LsGit(object):
     def __init__(self, stdout=None):
-        self.__stdout = stdout
+        self.stdout = stdout
         if stdout is None:
-            self.__stdout = sys.stdout
+            self.stdout = sys.stdout
 
     @property
     def is_tty(self):
         try:
-            termios.tcgetattr(self.__stdout)
+            termios.tcgetattr(self.stdout)
         except termios.error:
             return False
         else:
@@ -81,7 +81,7 @@ class LsGit(object):
             return True
 
     def print(self, *args, **kwargs):
-        print(*args, **kwargs, file=self.__stdout)
+        print(*args, **kwargs, file=self.stdout)
 
     def __call__(self, *args):
         LsGitProcess(self, args).run()
@@ -150,7 +150,7 @@ class LsGitProcess(object):
         return line + self.color(" ({})".format(branch), color='red', mode='bold')
 
     def __native_call(self):
-        return subprocess.check_call(self.__cmd)
+        return subprocess.check_call(self.__cmd, stdout=self.__parent.stdout)
 
     def __system_call(self):
         return system_call(self.__cmd)
