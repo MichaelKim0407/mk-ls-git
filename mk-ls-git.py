@@ -34,10 +34,10 @@ class LsGit(object):
     def print(self, *args, **kwargs):
         print(*args, **kwargs, file=self.__stdout)
 
-    def color(self, text, color):
+    def color(self, text, color=None, mode=None):
         if not self.__color:
             return text
-        return get_text(text, color=color)
+        return get_text(text, color=color, mode=mode)
 
     def process_line(self, line, env):
         if line.endswith(':') and line[:-1] in env['dirs']:
@@ -54,7 +54,7 @@ class LsGit(object):
             return line
 
         branch = self.get_git_branch(abspath)
-        return line + self.color(" ({})".format(branch), color='red')
+        return line + self.color(" ({})".format(branch), color='red', mode='bold')
 
     def __call__(self, *args):
         dirs = [arg for arg in args if not arg.startswith('-')]
