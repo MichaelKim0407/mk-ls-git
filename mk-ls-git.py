@@ -1,4 +1,6 @@
 import os
+import pty
+import re
 import subprocess
 import sys
 import termios
@@ -13,6 +15,27 @@ __author__ = 'Michael'
 def system_call(*args, **kwargs):
     out = subprocess.check_output(*args, **kwargs)
     return out.decode().splitlines(False)
+
+
+def system_call_pty(*args, **kwargs):
+    """
+    Opens a pty for stdout, so that colored output is retained.
+    """
+    master, slave = pty.openpty()
+    p = subprocess.Popen(*args, **kwargs, stdout=slave)
+    code = p.wait()
+    if code != 0:
+        raise subprocess.CalledProcessError(code, args[0])
+
+    # echo an empty line so that we can properly break
+    subprocess.call(['echo', ''], stdout=slave)
+
+    with os.fdopen(master) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                break
+            yield line
 
 
 def is_git_repo(abspath):
@@ -61,6 +84,8 @@ class LsGit(object):
 
 
 class LsGitProcess(object):
+    color_reg = re.compile('\033\[[0-9;]*m')  # TODO move to mklibpy
+
     def __init__(self, parent, args):
         self.__parent = parent
         self.__args = args
@@ -100,6 +125,9 @@ class LsGitProcess(object):
             return line
 
         dir = sp[8]
+        if self.__color:
+            dir = self.color_reg.sub('', dir)
+
         abspath = os.path.abspath(os.path.join(self.__cur_dir, dir))
         if not is_git_repo(abspath):
             return line
@@ -113,7 +141,7 @@ class LsGitProcess(object):
         else:
             self.__cur_dir = os.getcwd()
 
-        for line in system_call(['ls', '-l'] + list(self.__args)):
+        for line in system_call_pty(['ls', '-l'] + list(self.__args)):
             self.__parent.print(self.__process_line(line))
 
 
