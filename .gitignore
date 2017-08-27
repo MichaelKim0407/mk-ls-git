@@ -7,3 +7,7 @@ __pycache__/
 
 # Mac
 .DS_Store
+
+# Pip
+dist/
+*.egg-info/
