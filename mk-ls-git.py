@@ -18,31 +18,31 @@ def is_tty(fd):
         return True
 
 
+def system_call(*args, **kwargs):
+    out = subprocess.check_output(*args, **kwargs)
+    return out.decode().splitlines(False)
+
+
+def is_git_repo(abspath):
+    path = os.path.join(abspath, ".git")
+    return os.path.exists(path) and os.path.isdir(path)
+
+
+def get_git_branch(abspath):
+    with CD(abspath):
+        for line in system_call(['git', 'branch']):
+            sp = line.split()
+            if "*" not in sp:
+                continue
+            return sp[1]
+
+
 class LsGit(object):
     def __init__(self, stdout=None, color=True):
         self.__stdout = stdout
         if stdout is None:
             self.__stdout = sys.stdout
         self.__color = is_tty(self.__stdout) and color
-
-    @staticmethod
-    def system_call(*args, **kwargs):
-        out = subprocess.check_output(*args, **kwargs)
-        return out.decode().splitlines(False)
-
-    @staticmethod
-    def is_git_repo(abspath):
-        path = os.path.join(abspath, ".git")
-        return os.path.exists(path) and os.path.isdir(path)
-
-    @staticmethod
-    def get_git_branch(abspath):
-        with CD(abspath):
-            for line in LsGit.system_call(['git', 'branch']):
-                sp = line.split()
-                if "*" not in sp:
-                    continue
-                return sp[1]
 
     def print(self, *args, **kwargs):
         print(*args, **kwargs, file=self.__stdout)
@@ -63,10 +63,10 @@ class LsGit(object):
 
         dir = sp[8]
         abspath = os.path.abspath(os.path.join(env['cur_dir'], dir))
-        if not self.is_git_repo(abspath):
+        if not is_git_repo(abspath):
             return line
 
-        branch = self.get_git_branch(abspath)
+        branch = get_git_branch(abspath)
         return line + self.color(" ({})".format(branch), color='red', mode='bold')
 
     def __call__(self, *args):
@@ -82,7 +82,7 @@ class LsGit(object):
             'cur_dir': cur_dir,
         }
 
-        for line in self.system_call(['ls', '-l'] + list(args)):
+        for line in system_call(['ls', '-l'] + list(args)):
             print(self.process_line(line, env))
 
 
