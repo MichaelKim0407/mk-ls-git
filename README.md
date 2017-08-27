@@ -30,6 +30,8 @@ If `-l` option is specified, git-branch will be appended if the directory is the
 
 If in colored mode (`--color` for GNU ls or `-G` for BSD ls), git-branch will also be colored.
 
+![Screenshot](screenshot.png)
+
 ## Known Issues
 
 Please refer to Issues on GitHub.
