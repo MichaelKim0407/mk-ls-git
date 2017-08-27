@@ -1,5 +1,7 @@
 import os
 import subprocess
+import sys
+import termios
 
 from mklibpy.terminal.colored_text import get_text
 from mklibpy.util.path import CD
@@ -7,10 +9,21 @@ from mklibpy.util.path import CD
 __author__ = 'Michael'
 
 
+def is_tty(fd):
+    try:
+        termios.tcgetattr(fd)
+    except termios.error:
+        return False
+    else:
+        return True
+
+
 class LsGit(object):
     def __init__(self, stdout=None, color=True):
         self.__stdout = stdout
-        self.__color = color
+        if stdout is None:
+            self.__stdout = sys.stdout
+        self.__color = is_tty(self.__stdout) and color
 
     @staticmethod
     def system_call(*args, **kwargs):
