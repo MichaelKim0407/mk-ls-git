@@ -10,6 +10,8 @@ from mklibpy.util.path import CD
 
 __author__ = 'Michael'
 
+TIMEOUT = 0.5
+
 
 def system_call(*args, **kwargs):
     out = subprocess.check_output(*args, **kwargs)
@@ -22,19 +24,22 @@ def system_call_pty(*args, **kwargs):
     """
     master, slave = pty.openpty()
     p = subprocess.Popen(*args, **kwargs, stdout=slave)
-    code = p.wait()
+    code = p.wait(timeout=TIMEOUT)
     if code != 0:
         raise subprocess.CalledProcessError(code, args[0])
 
     # echo an empty line so that we can properly break
     subprocess.call(['echo', ''], stdout=slave)
 
-    with os.fdopen(master) as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                break
-            yield line
+    def __gen():
+        with os.fdopen(master) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    break
+                yield line
+
+    return __gen()
 
 
 def is_git_repo(abspath):
@@ -147,7 +152,18 @@ class LsGitProcess(object):
         else:
             self.__cur_dir = os.getcwd()
 
-        for line in system_call_pty(['ls', '-l'] + list(self.__args)):
+        args = ['ls', '-l'] + list(self.__args)
+
+        if not self.__color:
+            lines = system_call(args)
+        else:
+            # This is a workaround for a bug on Mac. See Issue #1 on GitHub
+            try:
+                lines = system_call_pty(args)
+            except subprocess.TimeoutExpired:
+                lines = system_call(args)
+
+        for line in lines:
             self.__parent.print(self.__process_line(line))
 
 
