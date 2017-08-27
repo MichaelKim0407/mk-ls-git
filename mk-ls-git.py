@@ -8,8 +8,9 @@ __author__ = 'Michael'
 
 
 class LsGit(object):
-    def __init__(self, stdout=None):
+    def __init__(self, stdout=None, color=True):
         self.__stdout = stdout
+        self.__color = color
 
     @staticmethod
     def system_call(*args, **kwargs):
@@ -33,6 +34,11 @@ class LsGit(object):
     def print(self, *args, **kwargs):
         print(*args, **kwargs, file=self.__stdout)
 
+    def color(self, text, color):
+        if not self.__color:
+            return text
+        return get_text(text, color=color)
+
     def process_line(self, line, env):
         if line.endswith(':') and line[:-1] in env['dirs']:
             env['cur_dir'] = line[:-1]
@@ -48,7 +54,7 @@ class LsGit(object):
             return line
 
         branch = self.get_git_branch(abspath)
-        return line + get_text(" ({})".format(branch), color='red')
+        return line + self.color(" ({})".format(branch), color='red')
 
     def __call__(self, *args):
         dirs = [arg for arg in args if not arg.startswith('-')]
