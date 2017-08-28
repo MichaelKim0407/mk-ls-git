@@ -4,7 +4,6 @@ import sys
 
 try:
     import pty
-    import termios
 except ImportError:
     TTY = False
 else:
@@ -69,19 +68,9 @@ class LsGit(object):
         if stdout is None:
             self.stdout = sys.stdout
 
-    if TTY:
-        @property
-        def is_tty(self):
-            try:
-                termios.tcgetattr(self.stdout)
-            except termios.error:
-                return False
-            else:
-                return True
-    else:
-        @property
-        def is_tty(self):
-            return False
+    @property
+    def is_tty(self):
+        return self.stdout.isatty()
 
     @property
     def is_gnu(self):
