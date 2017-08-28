@@ -200,6 +200,9 @@ class LsGitProcess(object):
                 lines = self.__system_call()
                 workaround_flag = True
 
+        # Also see Issue #3
+        workaround_flag = workaround_flag or not TTY
+
         if not workaround_flag:
             for line in lines:
                 self.__parent.print(self.__process_line(line))
