@@ -5,9 +5,9 @@ import sys
 try:
     import pty
 except ImportError:
-    TTY = False
+    PTY = False
 else:
-    TTY = True
+    PTY = True
 
 from mklibpy.common.string import AnyString
 from mklibpy.terminal.colored_text import get_text, remove_switch
@@ -23,7 +23,7 @@ def system_call(*args, **kwargs):
     return out.decode().splitlines(False)
 
 
-if TTY:
+if PTY:
     def system_call_pty(*args, **kwargs):
         """
         Opens a pty for stdout, so that colored output is retained.
@@ -170,7 +170,7 @@ class LsGitProcess(object):
     def __system_call(self):
         return system_call(self.__cmd)
 
-    if TTY:
+    if PTY:
         def __system_call_pty(self):
             return system_call_pty(self.__cmd)
 
@@ -184,7 +184,7 @@ class LsGitProcess(object):
         else:
             self.__cur_dir = os.getcwd()
 
-        if not TTY:
+        if not PTY:
             # See Issue #3
             lines = self.__system_call()
             workaround_flag = True
