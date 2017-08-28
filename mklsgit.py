@@ -1,8 +1,14 @@
 import os
-import pty
 import subprocess
 import sys
-import termios
+
+try:
+    import pty
+    import termios
+except ImportError:
+    TTY = False
+else:
+    TTY = True
 
 from mklibpy.common.string import AnyString
 from mklibpy.terminal.colored_text import get_text, remove_switch
@@ -18,28 +24,29 @@ def system_call(*args, **kwargs):
     return out.decode().splitlines(False)
 
 
-def system_call_pty(*args, **kwargs):
-    """
-    Opens a pty for stdout, so that colored output is retained.
-    """
-    master, slave = pty.openpty()
-    p = subprocess.Popen(*args, **kwargs, stdout=slave)
-    code = p.wait(timeout=TIMEOUT)
-    if code != 0:
-        raise subprocess.CalledProcessError(code, args[0])
+if TTY:
+    def system_call_pty(*args, **kwargs):
+        """
+        Opens a pty for stdout, so that colored output is retained.
+        """
+        master, slave = pty.openpty()
+        p = subprocess.Popen(*args, **kwargs, stdout=slave)
+        code = p.wait(timeout=TIMEOUT)
+        if code != 0:
+            raise subprocess.CalledProcessError(code, args[0])
 
-    # echo an empty line so that we can properly break
-    subprocess.call(['echo', ''], stdout=slave)
+        # echo an empty line so that we can properly break
+        subprocess.call(['echo', ''], stdout=slave)
 
-    def __gen():
-        with os.fdopen(master) as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    break
-                yield line
+        def __gen():
+            with os.fdopen(master) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        break
+                    yield line
 
-    return __gen()
+        return __gen()
 
 
 def is_git_repo(abspath):
@@ -62,14 +69,19 @@ class LsGit(object):
         if stdout is None:
             self.stdout = sys.stdout
 
-    @property
-    def is_tty(self):
-        try:
-            termios.tcgetattr(self.stdout)
-        except termios.error:
+    if TTY:
+        @property
+        def is_tty(self):
+            try:
+                termios.tcgetattr(self.stdout)
+            except termios.error:
+                return False
+            else:
+                return True
+    else:
+        @property
+        def is_tty(self):
             return False
-        else:
-            return True
 
     @property
     def is_gnu(self):
@@ -93,6 +105,7 @@ class LsGitProcess(object):
         self.__args = args
         self.__cmd = ['ls'] + list(self.__args)
 
+        self.__flags = None
         self.__options = None
         self.__dirs = None
         self.__cur_dir = None
@@ -100,12 +113,13 @@ class LsGitProcess(object):
         self.__parse_args()
 
     def __parse_args(self):
-        self.__options = AnyString([arg for arg in self.__args if arg.startswith('-')])
+        self.__flags = AnyString([arg for arg in self.__args if arg.startswith('-') and not arg.startswith('--')])
+        self.__options = AnyString([arg for arg in self.__args if arg.startswith('--')])
         self.__dirs = [arg for arg in self.__args if not arg.startswith('-')]
 
     @property
     def _l(self):
-        return 'l' in self.__options
+        return 'l' in self.__flags
 
     @property
     def __color(self):
@@ -122,7 +136,7 @@ class LsGitProcess(object):
         else:
             if not self.__parent.is_tty:
                 return False
-            return 'G' in self.__options
+            return 'G' in self.__flags
 
     def color(self, text, color=None, mode=None):
         if not self.__color:
@@ -155,8 +169,9 @@ class LsGitProcess(object):
     def __system_call(self):
         return system_call(self.__cmd)
 
-    def __system_call_pty(self):
-        return system_call_pty(self.__cmd)
+    if TTY:
+        def __system_call_pty(self):
+            return system_call_pty(self.__cmd)
 
     def run(self):
         if not self._l:
@@ -168,7 +183,11 @@ class LsGitProcess(object):
         else:
             self.__cur_dir = os.getcwd()
 
-        if not self.__color:
+        if not TTY:
+            # See Issue #3
+            lines = self.__system_call()
+            workaround_flag = True
+        elif not self.__color:
             lines = self.__system_call()
             workaround_flag = False
         else:

@@ -16,6 +16,8 @@ Author: [Michael Kim](http://michaelkim0407.com) <mkim0407@gmail.com>
 
     - Ubuntu Linux 16.04 + Python 3.5.2
 
+    - git-bash (Git for Windows 2.8.0) + Python 3.5.2 (See issue [#3](https://github.com/MichaelKim0407/mk-ls-git/issues/3))
+
 ## Installation
 
 ```
