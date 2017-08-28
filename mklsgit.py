@@ -105,6 +105,7 @@ class LsGitProcess(object):
         self.__args = args
         self.__cmd = ['ls'] + list(self.__args)
 
+        self.__flags = None
         self.__options = None
         self.__dirs = None
         self.__cur_dir = None
@@ -112,12 +113,13 @@ class LsGitProcess(object):
         self.__parse_args()
 
     def __parse_args(self):
-        self.__options = AnyString([arg for arg in self.__args if arg.startswith('-')])
+        self.__flags = AnyString([arg for arg in self.__args if arg.startswith('-') and not arg.startswith('--')])
+        self.__options = AnyString([arg for arg in self.__args if arg.startswith('--')])
         self.__dirs = [arg for arg in self.__args if not arg.startswith('-')]
 
     @property
     def _l(self):
-        return 'l' in self.__options
+        return 'l' in self.__flags
 
     if TTY:
         @property
@@ -135,7 +137,7 @@ class LsGitProcess(object):
             else:
                 if not self.__parent.is_tty:
                     return False
-                return 'G' in self.__options
+                return 'G' in self.__flags
     else:
         @property
         def __color(self):
