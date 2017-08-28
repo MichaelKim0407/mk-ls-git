@@ -102,9 +102,21 @@ class LsGitProcess(object):
         self.__parse_args()
 
     def __parse_args(self):
-        self.__flags = AnyString([arg for arg in self.__args if arg.startswith('-') and not arg.startswith('--')])
-        self.__options = AnyString([arg for arg in self.__args if arg.startswith('--')])
-        self.__dirs = [arg for arg in self.__args if not arg.startswith('-')]
+        self.__flags = AnyString([
+            arg
+            for arg in self.__args
+            if arg.startswith('-') and not arg.startswith('--')
+        ])
+        self.__options = AnyString([
+            arg
+            for arg in self.__args
+            if arg.startswith('--')
+        ])
+        self.__dirs = [
+            arg
+            for arg in self.__args
+            if not arg.startswith('-')
+        ]
 
     @property
     def _l(self):
