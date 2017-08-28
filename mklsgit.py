@@ -1,8 +1,14 @@
 import os
-import pty
 import subprocess
 import sys
-import termios
+
+try:
+    import pty
+    import termios
+except ImportError:
+    TTY = False
+else:
+    TTY = True
 
 from mklibpy.common.string import AnyString
 from mklibpy.terminal.colored_text import get_text, remove_switch
@@ -18,28 +24,29 @@ def system_call(*args, **kwargs):
     return out.decode().splitlines(False)
 
 
-def system_call_pty(*args, **kwargs):
-    """
-    Opens a pty for stdout, so that colored output is retained.
-    """
-    master, slave = pty.openpty()
-    p = subprocess.Popen(*args, **kwargs, stdout=slave)
-    code = p.wait(timeout=TIMEOUT)
-    if code != 0:
-        raise subprocess.CalledProcessError(code, args[0])
+if TTY:
+    def system_call_pty(*args, **kwargs):
+        """
+        Opens a pty for stdout, so that colored output is retained.
+        """
+        master, slave = pty.openpty()
+        p = subprocess.Popen(*args, **kwargs, stdout=slave)
+        code = p.wait(timeout=TIMEOUT)
+        if code != 0:
+            raise subprocess.CalledProcessError(code, args[0])
 
-    # echo an empty line so that we can properly break
-    subprocess.call(['echo', ''], stdout=slave)
+        # echo an empty line so that we can properly break
+        subprocess.call(['echo', ''], stdout=slave)
 
-    def __gen():
-        with os.fdopen(master) as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    break
-                yield line
+        def __gen():
+            with os.fdopen(master) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        break
+                    yield line
 
-    return __gen()
+        return __gen()
 
 
 def is_git_repo(abspath):
@@ -62,14 +69,19 @@ class LsGit(object):
         if stdout is None:
             self.stdout = sys.stdout
 
-    @property
-    def is_tty(self):
-        try:
-            termios.tcgetattr(self.stdout)
-        except termios.error:
+    if TTY:
+        @property
+        def is_tty(self):
+            try:
+                termios.tcgetattr(self.stdout)
+            except termios.error:
+                return False
+            else:
+                return True
+    else:
+        @property
+        def is_tty(self):
             return False
-        else:
-            return True
 
     @property
     def is_gnu(self):
@@ -107,22 +119,27 @@ class LsGitProcess(object):
     def _l(self):
         return 'l' in self.__options
 
-    @property
-    def __color(self):
-        if self.__parent.is_gnu:
-            if not self.__options.startswith('--color'):
-                return False
-            if self.__options == '--color' or self.__options == '--color=always':
-                return True
-            elif self.__options == '--color=auto':
-                return self.__parent.is_tty
-            else:
-                return False
+    if TTY:
+        @property
+        def __color(self):
+            if self.__parent.is_gnu:
+                if not self.__options.startswith('--color'):
+                    return False
+                if self.__options == '--color' or self.__options == '--color=always':
+                    return True
+                elif self.__options == '--color=auto':
+                    return self.__parent.is_tty
+                else:
+                    return False
 
-        else:
-            if not self.__parent.is_tty:
-                return False
-            return 'G' in self.__options
+            else:
+                if not self.__parent.is_tty:
+                    return False
+                return 'G' in self.__options
+    else:
+        @property
+        def __color(self):
+            return False
 
     def color(self, text, color=None, mode=None):
         if not self.__color:
@@ -155,8 +172,9 @@ class LsGitProcess(object):
     def __system_call(self):
         return system_call(self.__cmd)
 
-    def __system_call_pty(self):
-        return system_call_pty(self.__cmd)
+    if TTY:
+        def __system_call_pty(self):
+            return system_call_pty(self.__cmd)
 
     def run(self):
         if not self._l:
