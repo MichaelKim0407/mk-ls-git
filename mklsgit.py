@@ -121,27 +121,22 @@ class LsGitProcess(object):
     def _l(self):
         return 'l' in self.__flags
 
-    if TTY:
-        @property
-        def __color(self):
-            if self.__parent.is_gnu:
-                if not self.__options.startswith('--color'):
-                    return False
-                if self.__options == '--color' or self.__options == '--color=always':
-                    return True
-                elif self.__options == '--color=auto':
-                    return self.__parent.is_tty
-                else:
-                    return False
-
+    @property
+    def __color(self):
+        if self.__parent.is_gnu:
+            if not self.__options.startswith('--color'):
+                return False
+            if self.__options == '--color' or self.__options == '--color=always':
+                return True
+            elif self.__options == '--color=auto':
+                return self.__parent.is_tty
             else:
-                if not self.__parent.is_tty:
-                    return False
-                return 'G' in self.__flags
-    else:
-        @property
-        def __color(self):
-            return False
+                return False
+
+        else:
+            if not self.__parent.is_tty:
+                return False
+            return 'G' in self.__flags
 
     def color(self, text, color=None, mode=None):
         if not self.__color:
@@ -188,7 +183,11 @@ class LsGitProcess(object):
         else:
             self.__cur_dir = os.getcwd()
 
-        if not self.__color:
+        if not TTY:
+            # See Issue #3
+            lines = self.__system_call()
+            workaround_flag = True
+        elif not self.__color:
             lines = self.__system_call()
             workaround_flag = False
         else:
@@ -199,9 +198,6 @@ class LsGitProcess(object):
             except subprocess.TimeoutExpired:
                 lines = self.__system_call()
                 workaround_flag = True
-
-        # Also see Issue #3
-        workaround_flag = workaround_flag or not TTY
 
         if not workaround_flag:
             for line in lines:
