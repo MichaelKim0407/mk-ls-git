@@ -56,10 +56,9 @@ def is_git_repo(abspath):
 def get_git_branch(abspath):
     with CD(abspath):
         for line in system_call(['git', 'branch']):
-            sp = line.split()
-            if "*" not in sp:
+            if not line.startswith("*"):
                 continue
-            return sp[1]
+            return line.lstrip("*").strip()
 
 
 class LsGit(object):
