@@ -4,11 +4,10 @@ import sys
 
 try:
     import pty
-    import termios
 except ImportError:
-    TTY = False
+    PTY = False
 else:
-    TTY = True
+    PTY = True
 
 from mklibpy.common.string import AnyString
 from mklibpy.terminal.colored_text import get_text, remove_switch
@@ -24,7 +23,7 @@ def system_call(*args, **kwargs):
     return out.decode().splitlines(False)
 
 
-if TTY:
+if PTY:
     def system_call_pty(*args, **kwargs):
         """
         Opens a pty for stdout, so that colored output is retained.
@@ -57,10 +56,9 @@ def is_git_repo(abspath):
 def get_git_branch(abspath):
     with CD(abspath):
         for line in system_call(['git', 'branch']):
-            sp = line.split()
-            if "*" not in sp:
+            if not line.startswith("*"):
                 continue
-            return sp[1]
+            return line.lstrip("*").strip()
 
 
 class LsGit(object):
@@ -69,19 +67,9 @@ class LsGit(object):
         if stdout is None:
             self.stdout = sys.stdout
 
-    if TTY:
-        @property
-        def is_tty(self):
-            try:
-                termios.tcgetattr(self.stdout)
-            except termios.error:
-                return False
-            else:
-                return True
-    else:
-        @property
-        def is_tty(self):
-            return False
+    @property
+    def is_tty(self):
+        return self.stdout.isatty()
 
     @property
     def is_gnu(self):
@@ -113,9 +101,21 @@ class LsGitProcess(object):
         self.__parse_args()
 
     def __parse_args(self):
-        self.__flags = AnyString([arg for arg in self.__args if arg.startswith('-') and not arg.startswith('--')])
-        self.__options = AnyString([arg for arg in self.__args if arg.startswith('--')])
-        self.__dirs = [arg for arg in self.__args if not arg.startswith('-')]
+        self.__flags = AnyString([
+            arg
+            for arg in self.__args
+            if arg.startswith('-') and not arg.startswith('--')
+        ])
+        self.__options = AnyString([
+            arg
+            for arg in self.__args
+            if arg.startswith('--')
+        ])
+        self.__dirs = [
+            arg
+            for arg in self.__args
+            if not arg.startswith('-')
+        ]
 
     @property
     def _l(self):
@@ -169,7 +169,7 @@ class LsGitProcess(object):
     def __system_call(self):
         return system_call(self.__cmd)
 
-    if TTY:
+    if PTY:
         def __system_call_pty(self):
             return system_call_pty(self.__cmd)
 
@@ -183,7 +183,7 @@ class LsGitProcess(object):
         else:
             self.__cur_dir = os.getcwd()
 
-        if not TTY:
+        if not PTY:
             # See Issue #3
             lines = self.__system_call()
             workaround_flag = True
