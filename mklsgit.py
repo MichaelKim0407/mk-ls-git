@@ -9,6 +9,8 @@ except ImportError:
 else:
     PTY = True
 
+os.environ['__MKLIBPY_SUPPRESS_DEPRECATION_WARNING'] = '1'
+
 from mklibpy.common.string import AnyString
 from mklibpy.terminal.colored_text import get_text, remove_switch
 from mklibpy.util.path import CD
