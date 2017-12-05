@@ -2,6 +2,8 @@
 
 Author: [Michael Kim](http://michaelkim0407.com) <mkim0407@gmail.com>
 
+***IMPORTANT*** This package has been merged into [mklibpy-bin](https://github.com/MichaelKim0407/mklibpy/tree/master/mklibpy-bin) (v0.8) and is now inactive. Please install that package instead.
+
 ## Compatibility
 
 * Does **not** support Python 2

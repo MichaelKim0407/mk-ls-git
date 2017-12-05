@@ -9,8 +9,6 @@ except ImportError:
 else:
     PTY = True
 
-os.environ['__MKLIBPY_SUPPRESS_DEPRECATION_WARNING'] = '1'
-
 from mklibpy.common.string import AnyString
 from mklibpy.terminal.colored_text import get_text, remove_switch
 from mklibpy.util.path import CD
@@ -18,6 +16,9 @@ from mklibpy.util.path import CD
 __author__ = 'Michael'
 
 TIMEOUT = 0.5
+
+print("""`mklsgit` has been merged into `mklibpy-bin` (v0.8).
+Please uninstall this package and install `mklibpy-bin` instead.""", file=sys.stderr)
 
 
 def system_call(*args, **kwargs):
